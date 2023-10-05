@@ -3,23 +3,25 @@ package data
 import (
 	"encoding/json"
 	"fmt"
+	"kaspi.nurgalym.net/internal/validator"
 	"time"
 )
 
 type Product struct {
-	ID         int64     `json:"id"`                     // Unique integer ID for the product
-	CreatedAt  time.Time `json:"-"`                      // Timestamp for when the product is added to our database
-	Title      string    `json:"title"`                  // Product title
-	Year       int32     `json:"year,omitempty"`         // Product release year
-	Price      int32     `json:"price,omitempty,string"` // Product price (in tenge)
-	Categories []string  `json:"categories,omitempty"`   // Product category (technic, for home, etc.)
-	Version    int32     `json:"version"`                // The version number starts at 1 and will be incremented each
+	ID         int64     `json:"id"`                   // Unique integer ID for the product
+	CreatedAt  time.Time `json:"-"`                    // Timestamp for when the product is added to our database
+	Title      string    `json:"title"`                // Product title
+	Year       int32     `json:"year,omitempty"`       // Product release year
+	Price      Price     `json:"price,omitempty"`      // Product price (in tenge)
+	Categories []string  `json:"categories,omitempty"` // Product category (technic, for home, etc.)
+	Version    int32     `json:"version"`              // The version number starts at 1 and will be incremented each
 	// time the movie information is updated
 }
 
 func (p Product) MarshalJSON() ([]byte, error) {
 	// Create a variable holding the custom runtime string, just like before.
 	var price string
+
 	if p.Price != 0 {
 		price = fmt.Sprintf("%d tenge", p.Price)
 	}
@@ -41,4 +43,22 @@ func (p Product) MarshalJSON() ([]byte, error) {
 		Price:        price,
 	}
 	return json.Marshal(aux)
+}
+
+func ValidateProduct(v *validator.Validator, p *Product) {
+	v.Check(p.Title != "", "title", "must be provided")
+	v.Check(len(p.Title) <= 500, "title", "must not be more than 500 bytes long")
+
+	v.Check(p.Year != 0, "year", "must be provided")
+	v.Check(p.Year >= 1888, "year", "must be greater than 1888")
+	v.Check(p.Year <= int32(time.Now().Year()), "year", "must not be in the future")
+
+	v.Check(p.Price != 0, "price", "must be provided")
+	v.Check(p.Price > 0, "price ", "must be a positive integer")
+
+	v.Check(p.Categories != nil, "categories", "must be provided")
+	v.Check(len(p.Categories) >= 1, "categories", "must contain at least 1 genre")
+	v.Check(len(p.Categories) <= 5, "categories", "must not contain more than 5 genres")
+
+	v.Check(validator.Unique(p.Categories), "categories", "must not contain duplicate values")
 }
