@@ -1,0 +1,1 @@
+export KASPI='postgres://kaspi:kaspi@localhost/kaspi?sslmode=disable'
