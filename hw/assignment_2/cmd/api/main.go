@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	_ "github.com/lib/pq"
 	"kaspi.nurgalym.net/internal/data"
 	"kaspi.nurgalym.net/internal/jsonlog"
+	"kaspi.nurgalym.net/internal/mailer"
 	"os"
+	"sync"
 	"time"
-
-	_ "github.com/lib/pq"
 )
 
 const version = "1.0.0"
@@ -23,18 +24,27 @@ type config struct {
 		maxIdleConns int
 		maxIdleTime  string
 	}
-
 	limiter struct {
+		enabled bool
 		rps     float64
 		burst   int
-		enabled bool
+	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
 	}
 }
 
+// Update the application struct to hold a new Mailer instance.
 type application struct {
 	config config
 	logger *jsonlog.Logger
 	models data.Models
+	mailer mailer.Mailer
+	wg     sync.WaitGroup
 }
 
 func main() {
@@ -53,6 +63,12 @@ func main() {
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", "f238dd6f8c3416", "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", "f88a668cdf4e09", "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Kaspi <no-reply@greenlight.alexedwards.net>", "SMTP sender")
+
 	flag.Parse()
 	//logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
@@ -70,6 +86,7 @@ func main() {
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	err = app.serve()
