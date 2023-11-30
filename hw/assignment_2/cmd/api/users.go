@@ -22,18 +22,14 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		app.badRequestResponse(w, r, err)
 		return
 	}
-	// Copy the data from the request body into a new User struct. Notice also that we
-	// set the Activated field to false, which isn't strictly necessary because the
-	// Activated field will have the zero-value of false by default. But setting this
-	// explicitly helps to make our intentions clear to anyone reading the code.
+
 	user := &data.User{
 		Name:      input.Name,
 		Email:     input.Email,
 		Activated: false,
 		Balance:   input.Balance,
 	}
-	// Use the Password.Set() method to generate and store the hashed and plaintext
-	// passwords.
+
 	err = user.Password.Set(input.Password)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -58,6 +54,13 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		}
 		return
 	}
+
+	err = app.models.Permissions.AddForUser(user.ID, "products:read")
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
 	// After the user record has been created in the database, generate a new activation
 	// token for the user.
 	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
@@ -66,10 +69,6 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	app.background(func() {
-		// As there are now multiple pieces of data that we want to pass to our email
-		// templates, we create a map to act as a 'holding structure' for the data. This
-		// contains the plaintext version of the activation token for the user, along
-		// with their ID.
 		data := map[string]interface{}{
 			"activationToken": token.Plaintext,
 			"userID":          user.ID,
