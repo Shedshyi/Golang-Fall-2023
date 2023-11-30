@@ -9,6 +9,7 @@ import (
 	"kaspi.nurgalym.net/internal/jsonlog"
 	"kaspi.nurgalym.net/internal/mailer"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -35,6 +36,10 @@ type config struct {
 		username string
 		password string
 		sender   string
+	}
+
+	cors struct {
+		trustedOrigins []string
 	}
 }
 
@@ -67,9 +72,14 @@ func main() {
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
 	flag.StringVar(&cfg.smtp.username, "smtp-username", "f238dd6f8c3416", "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "f88a668cdf4e09", "SMTP password")
-	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Kaspi <no-reply@greenlight.alexedwards.net>", "SMTP sender")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Kaspi <no-reply@kaspi.nurglaym.net>", "SMTP sender")
 
+	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(val string) error {
+		cfg.cors.trustedOrigins = strings.Fields(val)
+		return nil
+	})
 	flag.Parse()
+
 	//logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
