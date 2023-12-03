@@ -1,0 +1,2 @@
+i try to use wait for sh to 
+wait the db then run api 

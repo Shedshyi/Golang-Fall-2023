@@ -1,6 +1,6 @@
 module kaspi.nurgalym.net
 
-go 1.21rc3
+go 1.20
 
 require (
 	github.com/go-mail/mail/v2 v2.3.0 // indirect

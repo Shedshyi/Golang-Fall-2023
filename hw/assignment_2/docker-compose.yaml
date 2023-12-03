@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: kaspi
+      POSTGRES_PASSWORD: "kaspi"
+      POSTGRES_DB: kaspi
+    networks:
+      - dev
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+  kaspi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-container
+    environment:
+      - KASPI_DB_DSN=postgres://kaspi:kaspi@db:5432/kaspi?sslmode=disable
+      - PORT=4000
+    networks:
+      - dev
+    ports:
+      - "4000:4000"
+    depends_on:
+      - db
+
+
+
+networks:
+  dev:
+    driver: bridge
+
+volumes:
+  postgres:
